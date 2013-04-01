@@ -1,0 +1,9 @@
+<h1>Paste EFT fit here</h1>
+
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+<form action="{% url 'EFP:index' %}" method="post">
+	{% csrf_token %}
+	<textarea name="fit_data" rows=30 cols=100></textarea><br>
+	<input type="submit" value="Get Price!" />
+</form>
