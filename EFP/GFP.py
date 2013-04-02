@@ -1,51 +1,53 @@
 import urllib, xmltodict, re
 from models import Invtypes, Invnames
 
+url="http://api.eve-central.com/api/marketstat"
 staticDB = 'eve_static'
 
 invNames = Invnames.objects.using(staticDB)
 invTypes = Invtypes.objects.using(staticDB)
 
-def set_item_quantity(itemName, quantity):
-	global itemList
-
+def set_item_quantity(itemData, itemName, quantity):
 	inc = 1
 	if quantity:
 		inc = quantity
 
 	try:
-		if itemList[itemName]:
-			itemList[itemName] += inc
+		if itemData.itemList[itemName]:
+			itemData.itemList[itemName] += inc
 	except:
-		itemList[itemName] = inc
+		itemData.itemList[itemName] = inc
 
 def add_commas(foo):
 	return("{0:,}".format(foo))
 
-def get_fit_price(form_data):
-	global systemID, itemList, itemDict, badItemList
-
-	itemList = dict()
-	itemDict = dict()
-	badItemList = set()
-	fit_data = form_data['fit']
-	systemID = invNames.get(itemname=form_data['system']).itemid
+def parse_fit(fit_data):
+	class itemData:
+		itemList = dict()
 
 	for line in fit_data.splitlines():
 		try:
 			if line[0] == "[":
 				re.IGNORECASE
 				if not re.search("^\[empty", line):
-					set_item_quantity(line.rstrip().split(",")[0][1:], None)
+					set_item_quantity(itemData, line.rstrip().split(",")[0][1:], None)
 			else:
-				if line.rstrip():
-					q = re.search(" x\d+$", line)
+				item = line.rstrip()
+				if item:
+					q = re.search(" x\d+$", item)
 					if q:
-						set_item_quantity(line[:q.start()], int(q.group(0)[2:]))
+						set_item_quantity(itemData, item[:q.start()], int(q.group(0)[2:]))
 					else:
-						set_item_quantity(line.rstrip().split(",")[0], None)
+						set_item_quantity(itemData, item.split(",")[0], None)
 		except:
 			pass
+
+	#return g_itemList
+	return itemData.itemList
+
+def fetch_itemid(itemList):
+	itemDict = dict()
+	badItemList = set()
 
 	for item in itemList:
 		try:
@@ -53,11 +55,18 @@ def get_fit_price(form_data):
 		except(DoesNotExist):
 			badItemList.add(item)
 
+	return itemDict, badItemList
+
+def get_fit_price(form_data):
+	itemList = parse_fit(form_data['fit'])
+	itemDict, badItemList = fetch_itemid(itemList)
+	systemID = invNames.get(itemname=form_data['system']).itemid
 
 	# It's easier to construct our own POST data than to use urlencode
-	post_data="usesystem=" + str(systemID) + "&typeid=" + "&typeid=".join(itemDict)
-	f = urllib.urlopen("http://api.eve-central.com/api/marketstat", post_data)
+	post_data="usesystem={0}&typeid={1}".format(str(systemID), "&typeid=".join(itemDict))
+	f = urllib.urlopen(url, post_data)
 	doc = xmltodict.parse(f.read())
+	f.close()
 
 	output = dict()
 	output['data'] = list()
