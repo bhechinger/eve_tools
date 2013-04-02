@@ -13,8 +13,7 @@ def set_item_quantity(itemData, itemName, quantity):
 		inc = quantity
 
 	try:
-		if itemData.itemList[itemName]:
-			itemData.itemList[itemName] += inc
+		itemData.itemList[itemName] += inc
 	except:
 		itemData.itemList[itemName] = inc
 
