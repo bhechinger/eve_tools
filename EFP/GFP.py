@@ -1,11 +1,10 @@
-#!/usr/local/bin/python
-import MySQLdb, urllib, xmltodict, re
+import urllib, xmltodict, re
+from models import Invtypes, Invnames
 
-db = MySQLdb.connect(host="zaphod", user="lockefox", passwd="LockeFox2012", db="eve_static")
-cur = db.cursor() 
+staticDB = 'eve_static'
 
-# Jita's system ID
-systemID = 30000142
+invNames = Invnames.objects.using(staticDB)
+invTypes = Invtypes.objects.using(staticDB)
 
 def set_item_quantity(itemName, quantity):
 	global itemList
@@ -23,33 +22,35 @@ def set_item_quantity(itemName, quantity):
 def add_commas(foo):
 	return("{0:,}".format(foo))
 
-def get_fit_price(eft_data):
+def get_fit_price(form_data):
 	global systemID, itemList, itemDict, badItemList
 
 	itemList = dict()
 	itemDict = dict()
 	badItemList = set()
+	fit_data = form_data['fit']
+	systemID = invNames.get(itemname=form_data['system']).itemid
 
-	for line in eft_data.splitlines():
+	for line in fit_data.splitlines():
 		try:
 			if line[0] == "[":
 				re.IGNORECASE
 				if not re.search("^\[empty", line):
-					set_item_quantity(line.rstrip().split(",")[0].split("[")[1], None)
+					set_item_quantity(line.rstrip().split(",")[0][1:], None)
 			else:
 				if line.rstrip():
-					if re.search(" x\d+$", line):
-						set_item_quantity(line.rstrip().split(" x")[0], int(line.rstrip().split(" x")[1]))
+					q = re.search(" x\d+$", line)
+					if q:
+						set_item_quantity(line[:q.start()], int(q.group(0)[2:]))
 					else:
 						set_item_quantity(line.rstrip().split(",")[0], None)
 		except:
 			pass
 
 	for item in itemList:
-		cur.execute("SELECT typeID FROM invTypes WHERE typeName='{0}'".format(MySQLdb.escape_string(item)))
 		try:
-			itemDict[str(cur.fetchone()[0])] = item
-		except(TypeError):
+			itemDict[str(invTypes.get(typename=item).typeid)] = item
+		except(DoesNotExist):
 			badItemList.add(item)
 
 
@@ -66,11 +67,13 @@ def get_fit_price(eft_data):
 	for x in doc['evec_api']['marketstat']['type']:
 		itemName = itemDict[x['@id']]
 		itemQuantity = itemList[itemName]
-		buy = int(x['buy']['max'].split(".")[0]) * itemQuantity
-		sell = int(x['sell']['min'].split(".")[0]) * itemQuantity
+		buy = int(x['buy']['max'].split(".")[0])
+		sell = int(x['sell']['min'].split(".")[0])
+		buy_subtotal = buy * itemQuantity
+		sell_subtotal = sell * itemQuantity
 		output['data'].append({'name': itemName, 'quantity': itemQuantity, 'buy': add_commas(buy), 'sell': add_commas(sell)})
-		buy_total += buy
-		sell_total += sell
+		buy_total += buy_subtotal
+		sell_total += sell_subtotal
 
 	output['data'].append({'name': None, 'quantity': None, 'buy': add_commas(buy_total), 'sell': add_commas(sell_total)})
 
