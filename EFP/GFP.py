@@ -51,7 +51,10 @@ def fetch_itemid(itemList):
 	for item in itemList:
 		try:
 			itemDict[str(invTypes.get(typename=item).typeid)] = item
-		except(DoesNotExist):
+		# need to figure out why this doesn't work:
+		# Exception Value:	global name 'DoesNotExist' is not defined
+		#except(Invtypes.DoesNotExist):
+		except:
 			badItemList.add(item)
 
 	return itemDict, badItemList
