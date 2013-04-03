@@ -1,5 +1,8 @@
 <h1>Prices</h1>
 
+{% for ship, fitting in output.items %}
+<h1>{{ ship }}</h1>
+
 <table border="1">
 	<tr>
 		<td align="center"><b>Name</b></td>
@@ -8,26 +11,27 @@
 		<td align="center"><b>Sell</b></td>
 	</tr>
 
-{% for row in output.data %}
+	{% for row in fitting %}
 	<tr>
-	{% if row.name %}
+		{% if row.name %}
 		<td align="left">{{ row.name }}</td>
 		<td align="center">{{ row.quantity }}</td>
 		<td align="right">{{ row.buy }}</td>
 		<td align="right">{{ row.sell }}</td>
-	{% else %}
+		{% else %}
 		<td></td>
 		<td></td>
 		<td align="right"><b>{{ row.buy }}</b></td>
 		<td align="right"><b>{{ row.sell }}</b></td>
-	{% endif %}
+		{% endif %}
 	</tr>
-{% endfor %}
+	{% endfor %}
 </table>
 
-{% if output.badItemList %}
-	<p>Items not found in the database:</p>
-	{% for bad in output.badItemList %}
-	<li>{{ bad }}</li>
-	{% endfor %}
-{% endif %}
+	{% if badItemList.ship %}
+		<p>Items not found in the database:</p>
+		{% for bad in badItemList.ship %}
+		<li>{{ bad }}</li>
+		{% endfor %}
+	{% endif %}
+{% endfor %}

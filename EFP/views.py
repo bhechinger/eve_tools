@@ -23,9 +23,10 @@ def index(request):
 	if request.method == 'POST': # If the form has been submitted...
 		form = FitForm(request.POST) # A form bound to the POST data
 		if form.is_valid(): # All validation rules pass
-			output = GFP.get_fit_price(form.cleaned_data)
+			output, badItemList = GFP.get_fit_price(form.cleaned_data)
 			return render(request, 'EFP/results.html', {
 				'output': output,
+				'badItemList': badItemList,
 			})
 	else:
 		form = FitForm() # An unbound form
