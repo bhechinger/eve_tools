@@ -23,7 +23,6 @@ def add_commas(foo):
 	return "{0:,}".format(foo)
 
 def parse_xml_fit(fit_data):
-	logger.debug("parsing XML data: {0}".format(fit_data))
 	class itemData:
 		itemList = dict()
 		ship_name = ""
@@ -48,11 +47,9 @@ def parse_xml_fit(fit_data):
 							qty = int(fitting.attrib['qty'])
 						set_item_quantity(itemData, fitting.attrib['type'], qty)
 
-	logger.debug("parse_xml_fit() returning: {0}".format(itemData.itemList))
 	return itemData.itemList
 
 def parse_eft_fit(fit_data):
-	logger.debug("parsing EFT data: {0}".format(fit_data))
 	class itemData:
 		itemList = dict()
 		ship_name = ""
@@ -75,7 +72,6 @@ def parse_eft_fit(fit_data):
 		except:
 			pass
 
-	logger.debug("parse_eft_fit() returning: {0}".format(itemData.itemList))
 	return itemData.itemList
 
 def parse_fit(fit_data):
@@ -103,20 +99,23 @@ def fetch_itemid(itemList):
 	return itemDict, badItemList
 
 def get_fit_price(form_data):
+	if form_data['file']:
+		fit_data = form_data['file'].read()
+	else:
+		if not form_data['fit']:
+			return None, None, "No file uploaded and no data pasted!!!"
+		fit_data = form_data['fit']
+
 	systemID = invNames.get(itemname=form_data['system']).itemid
-	itemList = parse_fit(form_data['fit'])
+	itemList = parse_fit(fit_data)
 	itemDict, badItemList = fetch_itemid(itemList)
 	output = dict()
-
-	logger.debug("itemList: {0}".format(itemList))
-	logger.debug("itemDict: {0}".format(itemDict))
-	logger.debug("badItemList: {0}".format(badItemList))
 
 	for ship in itemDict:
 		# It's easier to construct our own POST data than to use urlencode
 		post_data="usesystem={0}&typeid={1}".format(str(systemID), "&typeid=".join(itemDict[ship]))
 		url_data = "{0}/?{1}".format(url, post_data)
-		logger.debug("data url: {0}".format(url_data))
+		#logger.debug("data url: {0}".format(url_data))
 		#try:
 		#	tree = etree.parse(url_data)
 		#except(etree.XMLSyntaxError):
@@ -145,5 +144,5 @@ def get_fit_price(form_data):
 			
 		output[ship].append({'name': None, 'quantity': None, 'buy': add_commas(buy_total), 'sell': add_commas(sell_total)})
 
-	logger.debug("output: {0} badItemList: {1}".format(output, badItemList))
-	return output, badItemList
+	#logger.debug("output: {0} badItemList: {1}".format(output, badItemList))
+	return output, badItemList, None

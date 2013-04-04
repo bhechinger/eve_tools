@@ -1,4 +1,5 @@
 <h2>Prices</h2>
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
 {% for ship, fitting in output.items %}
 	<h1>{{ ship }}</h1>

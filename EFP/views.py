@@ -15,7 +15,7 @@ system_list = (
 
 class FitForm(forms.Form):
 	system = forms.ChoiceField(choices=system_list)
-	fit = forms.CharField(widget=forms.Textarea)
+	fit = forms.CharField(widget=forms.Textarea, required=False)
 	file  = forms.FileField(required=False)
 
 def index(request):
@@ -23,8 +23,9 @@ def index(request):
 		form = FitForm(request.POST, request.FILES) # A form bound to the POST data
 		if form.is_valid(): # All validation rules pass
 			#output, badItemList = GFP.get_fit_price(form.cleaned_data, request.FILES)
-			output, badItemList = GFP.get_fit_price(form.cleaned_data)
+			output, badItemList, error_message = GFP.get_fit_price(form.cleaned_data)
 			return render(request, 'EFP/results.html', {
+				'error_message': error_message,
 				'output': output,
 				'badItemList': badItemList,
 			})
