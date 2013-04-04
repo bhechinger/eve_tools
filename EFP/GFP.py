@@ -88,19 +88,19 @@ def get_slot(item):
 	slot = eve_static_cur.fetchone()[0]
 	# slot mapping from the weirdness in the db to reality
 	if slot == "loPower":
-		slotname = "Low Power"
+		slotname = "C Low Power"
 	elif slot == "medPower":
-		slotname = "Medium Power"
+		slotname = "B Medium Power"
 	elif slot == "hiPower":
-		slotname = "High Power"
+		slotname = "A High Power"
 	elif slot == "rigSlot":
-		slotname = "Rig Slot"
+		slotname = "D Rig Slot"
 	elif slot == "subSystem":
-		slotname = "Subsystem"
+		slotname = "E Subsystem"
 	elif slot == "targetAttack":
-		slotname = "Drone"
+		slotname = "F Drone"
 	elif slot == "massFactor":
-		slotname = "Hull"
+		slotname = "G Hull"
 	else:
 		slotname = None
 
