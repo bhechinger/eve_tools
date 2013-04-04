@@ -1,6 +1,8 @@
 import urllib, re, logging
+from operator import itemgetter
 from models import Invtypes, Invnames
 from lxml import etree
+from django.db import connections
 
 url="http://api.eve-central.com/api/marketstat"
 staticDB = 'eve_static'
@@ -80,6 +82,30 @@ def parse_fit(fit_data):
 	else:
 		return parse_eft_fit(fit_data)
 
+def get_slot(item):
+	eve_static_cur = connections['eve_static'].cursor()
+	eve_static_cur.execute("SELECT TRIM(effect.effectName) AS slot FROM invTypes AS type INNER JOIN dgmTypeEffects AS typeEffect ON type.typeID = typeEffect.typeID INNER JOIN dgmEffects AS effect ON typeEffect.effectID = effect.effectID WHERE effect.effectName IN ('loPower', 'medPower', 'hiPower', 'rigSlot', 'subSystem', 'targetAttack', 'massFactor') AND type.typeName = %s;", [item])
+	slot = eve_static_cur.fetchone()[0]
+	# slot mapping from the weirdness in the db to reality
+	if slot == "loPower":
+		slotname = "Low Power"
+	elif slot == "medPower":
+		slotname = "Medium Power"
+	elif slot == "hiPower":
+		slotname = "High Power"
+	elif slot == "rigSlot":
+		slotname = "Rig Slot"
+	elif slot == "subSystem":
+		slotname = "Subsystem"
+	elif slot == "targetAttack":
+		slotname = "Drone"
+	elif slot == "massFactor":
+		slotname = "Hull"
+	else:
+		slotname = None
+
+	return slotname
+
 def fetch_itemid(itemList):
 	itemDict = dict()
 	badItemList = dict()
@@ -140,8 +166,9 @@ def get_fit_price(form_data):
 				sell_subtotal = sell * itemQuantity
 				buy_total += buy_subtotal
 				sell_total += sell_subtotal
-				output[ship].append({'name': itemName, 'quantity': itemQuantity, 'buy': add_commas(buy), 'sell': add_commas(sell)})
-			
+				output[ship].append({'name': itemName, 'quantity': itemQuantity, 'slot': get_slot(itemName), 'buy': add_commas(buy), 'sell': add_commas(sell)})
+
+		output[ship].sort(key=itemgetter('slot'))
 		output[ship].append({'name': None, 'quantity': None, 'buy': add_commas(buy_total), 'sell': add_commas(sell_total)})
 
 	#logger.debug("output: {0} badItemList: {1}".format(output, badItemList))
