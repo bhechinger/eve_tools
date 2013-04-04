@@ -14,15 +14,15 @@ system_list = (
 )
 
 class FitForm(forms.Form):
-	#System_list = invNames.all()
-	#System = forms.ChoiceField(choices=invNames.all())
 	system = forms.ChoiceField(choices=system_list)
 	fit = forms.CharField(widget=forms.Textarea)
+	file  = forms.FileField(required=False)
 
 def index(request):
 	if request.method == 'POST': # If the form has been submitted...
-		form = FitForm(request.POST) # A form bound to the POST data
+		form = FitForm(request.POST, request.FILES) # A form bound to the POST data
 		if form.is_valid(): # All validation rules pass
+			#output, badItemList = GFP.get_fit_price(form.cleaned_data, request.FILES)
 			output, badItemList = GFP.get_fit_price(form.cleaned_data)
 			return render(request, 'EFP/results.html', {
 				'output': output,

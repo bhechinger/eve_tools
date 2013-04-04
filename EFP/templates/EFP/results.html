@@ -1,37 +1,43 @@
-<h1>Prices</h1>
+<h2>Prices</h2>
 
 {% for ship, fitting in output.items %}
-<h1>{{ ship }}</h1>
+	<h1>{{ ship }}</h1>
 
-<table border="1">
-	<tr>
-		<td align="center"><b>Name</b></td>
-		<td align="center"><b>Quantity</b></td>
-		<td align="center"><b>Buy</b></td>
-		<td align="center"><b>Sell</b></td>
-	</tr>
+	<table border="1">
+		<tr>
+			<td align="center"><b>Name</b></td>
+			<td align="center"><b>Quantity</b></td>
+			<td align="center"><b>Buy</b></td>
+			<td align="center"><b>Sell</b></td>
+		</tr>
 
 	{% for row in fitting %}
-	<tr>
+		<tr>
 		{% if row.name %}
-		<td align="left">{{ row.name }}</td>
-		<td align="center">{{ row.quantity }}</td>
-		<td align="right">{{ row.buy }}</td>
-		<td align="right">{{ row.sell }}</td>
+			<td align="left">{{ row.name }}</td>
+			<td align="center">{{ row.quantity }}</td>
+			<td align="right">{{ row.buy }}</td>
+			<td align="right">{{ row.sell }}</td>
 		{% else %}
-		<td></td>
-		<td></td>
-		<td align="right"><b>{{ row.buy }}</b></td>
-		<td align="right"><b>{{ row.sell }}</b></td>
+			<td></td>
+			<td></td>
+			<td align="right"><b>{{ row.buy }}</b></td>
+			<td align="right"><b>{{ row.sell }}</b></td>
 		{% endif %}
 	</tr>
 	{% endfor %}
-</table>
+	</table>
 
-	{% if badItemList.ship %}
-		<p>Items not found in the database:</p>
-		{% for bad in badItemList.ship %}
-		<li>{{ bad }}</li>
-		{% endfor %}
-	{% endif %}
+	{% for badShip, badList in badItemList.items %}
+		{% if badShip == ship %}
+			{% if badList %}
+				<p>Items not found in the database:</p>
+				{% for bad in badList %}
+					<li>{{ bad }}</li>
+				{% endfor %}
+			{% endif %}
+		{% endif %}
+	{% endfor %}
+
+	<hr>
 {% endfor %}

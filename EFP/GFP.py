@@ -23,6 +23,7 @@ def add_commas(foo):
 	return "{0:,}".format(foo)
 
 def parse_xml_fit(fit_data):
+	logger.debug("parsing XML data: {0}".format(fit_data))
 	class itemData:
 		itemList = dict()
 		ship_name = ""
@@ -47,10 +48,11 @@ def parse_xml_fit(fit_data):
 							qty = int(fitting.attrib['qty'])
 						set_item_quantity(itemData, fitting.attrib['type'], qty)
 
-	#logger.debug("parse_xml_fit(): itemData.itemList: {0}".format(itemData.itemList))
+	logger.debug("parse_xml_fit() returning: {0}".format(itemData.itemList))
 	return itemData.itemList
 
 def parse_eft_fit(fit_data):
+	logger.debug("parsing EFT data: {0}".format(fit_data))
 	class itemData:
 		itemList = dict()
 		ship_name = ""
@@ -59,7 +61,8 @@ def parse_eft_fit(fit_data):
 		try:
 			if line[0] == "[":
 				if not re.search("^\[empty", line):
-					itemData.ship_name = line.rstrip().split(",")[1][1:]
+					itemData.ship_name = line.rstrip().split(",")[1][1:-2]
+					itemData.itemList[itemData.ship_name] = dict()
 					set_item_quantity(itemData, line.rstrip().split(",")[0][1:], None)
 			else:
 				item = line.rstrip()
@@ -72,7 +75,7 @@ def parse_eft_fit(fit_data):
 		except:
 			pass
 
-	#logger.debug("parse_eft_fit(): itemData.itemList: {0}".format(itemData.itemList))
+	logger.debug("parse_eft_fit() returning: {0}".format(itemData.itemList))
 	return itemData.itemList
 
 def parse_fit(fit_data):
@@ -97,14 +100,17 @@ def fetch_itemid(itemList):
 			except:
 				badItemList[ship].add(item)
 
-	#logger.debug("fetch_itemid(): itemDict: {0} badItemList: {1}".format(itemDict, badItemList))
 	return itemDict, badItemList
 
 def get_fit_price(form_data):
+	systemID = invNames.get(itemname=form_data['system']).itemid
 	itemList = parse_fit(form_data['fit'])
 	itemDict, badItemList = fetch_itemid(itemList)
-	systemID = invNames.get(itemname=form_data['system']).itemid
 	output = dict()
+
+	logger.debug("itemList: {0}".format(itemList))
+	logger.debug("itemDict: {0}".format(itemDict))
+	logger.debug("badItemList: {0}".format(badItemList))
 
 	for ship in itemDict:
 		# It's easier to construct our own POST data than to use urlencode
@@ -138,10 +144,6 @@ def get_fit_price(form_data):
 				output[ship].append({'name': itemName, 'quantity': itemQuantity, 'buy': add_commas(buy), 'sell': add_commas(sell)})
 			
 		output[ship].append({'name': None, 'quantity': None, 'buy': add_commas(buy_total), 'sell': add_commas(sell_total)})
-
-		#if badItemList[ship]:
-		#	for i in badItemList[ship]:
-		#		output[ship]['badItemList'].append(i)
 
 	logger.debug("output: {0} badItemList: {1}".format(output, badItemList))
 	return output, badItemList
