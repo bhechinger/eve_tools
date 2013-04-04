@@ -47,7 +47,7 @@ def parse_xml_fit(fit_data):
 							qty = int(fitting.attrib['qty'])
 						set_item_quantity(itemData, fitting.attrib['type'], qty)
 
-	logger.debug("parse_xml_fit(): itemData.itemList: {0}".format(itemData.itemList))
+	#logger.debug("parse_xml_fit(): itemData.itemList: {0}".format(itemData.itemList))
 	return itemData.itemList
 
 def parse_eft_fit(fit_data):
@@ -72,7 +72,7 @@ def parse_eft_fit(fit_data):
 		except:
 			pass
 
-	logger.debug("parse_eft_fit(): itemData.itemList: {0}".format(itemData.itemList))
+	#logger.debug("parse_eft_fit(): itemData.itemList: {0}".format(itemData.itemList))
 	return itemData.itemList
 
 def parse_fit(fit_data):
@@ -97,13 +97,14 @@ def fetch_itemid(itemList):
 			except:
 				badItemList[ship].add(item)
 
-	logger.debug("fetch_itemid(): itemDict: {0} badItemList: {1}".format(itemDict, badItemList))
+	#logger.debug("fetch_itemid(): itemDict: {0} badItemList: {1}".format(itemDict, badItemList))
 	return itemDict, badItemList
 
 def get_fit_price(form_data):
 	itemList = parse_fit(form_data['fit'])
 	itemDict, badItemList = fetch_itemid(itemList)
 	systemID = invNames.get(itemname=form_data['system']).itemid
+	output = dict()
 
 	for ship in itemDict:
 		# It's easier to construct our own POST data than to use urlencode
@@ -120,8 +121,6 @@ def get_fit_price(form_data):
 		tree = etree.fromstring(f.read())
 		f.close()
 
-		output = dict()
-		#output[ship] = dict()
 		output[ship] = list()
 		buy_total = 0
 		sell_total = 0
