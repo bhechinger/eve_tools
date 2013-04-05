@@ -84,8 +84,12 @@ def parse_fit(fit_data):
 
 def get_slot(item):
 	eve_static_cur = connections['eve_static'].cursor()
-	eve_static_cur.execute("SELECT TRIM(effect.effectName) AS slot FROM invTypes AS type INNER JOIN dgmTypeEffects AS typeEffect ON type.typeID = typeEffect.typeID INNER JOIN dgmEffects AS effect ON typeEffect.effectID = effect.effectID WHERE effect.effectName IN ('loPower', 'medPower', 'hiPower', 'rigSlot', 'subSystem', 'targetAttack', 'massFactor') AND type.typeName = %s;", [item])
-	slot = eve_static_cur.fetchone()[0]
+	eve_static_cur.execute("SELECT TRIM(effect.effectName) AS slot FROM invTypes AS type INNER JOIN dgmTypeEffects AS typeEffect ON type.typeID = typeEffect.typeID INNER JOIN dgmEffects AS effect ON typeEffect.effectID = effect.effectID WHERE effect.effectName IN ('loPower', 'medPower', 'hiPower', 'rigSlot', 'subSystem', 'targetAttack', 'massFactor', 'targetArmorRepair') AND type.typeName = %s;", [item])
+	try:
+		slot = eve_static_cur.fetchone()[0]
+	except:
+		return "Z Unknown"
+
 	# slot mapping from the weirdness in the db to reality
 	if slot == "loPower":
 		slotname = "C Low Power"
@@ -97,12 +101,12 @@ def get_slot(item):
 		slotname = "D Rig Slot"
 	elif slot == "subSystem":
 		slotname = "E Subsystem"
-	elif slot == "targetAttack":
+	elif slot == "targetAttack" or slot == "targetArmorRepair":
 		slotname = "F Drone"
 	elif slot == "massFactor":
 		slotname = "G Hull"
 	else:
-		slotname = None
+		slotname = "Z Unknown"
 
 	return slotname
 
