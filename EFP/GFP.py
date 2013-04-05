@@ -95,31 +95,41 @@ def get_slot(item):
 		try:
 			slot = eve_static_cur.fetchone()[0]
 		except:
-			return "Z Unknown"
+			return "Z", "Unknown"
 
 		if slot == "hiPower":
-			slotname = "A High Power"
+			slotorder = "A"
+			slotname = "High Power"
 		elif slot == "medPower":
-			slotname = "B Medium Power"
+			slotorder = "B"
+			slotname = "Medium Power"
 		elif slot == "loPower":
-			slotname = "C Low Power"
+			slotorder = "C"
+			slotname = "Low Power"
 		elif slot == "rigSlot":
-			slotname = "D Rig Slot"
+			slotorder = "D"
+			slotname = "Rig Slot"
 		else:
-			slotname = "Z Unknown"
+			slotorder = "Z"
+			slotname = "Unknown"
 
 	elif categoryName == 'Subsystem':
-		slotname = "E Subsystem"
+		slotorder = "E"
+		slotname = "Subsystem"
 	elif categoryName == 'Ship':
-		slotname = "F Ship"
+		slotorder = "F"
+		slotname = "Ship"
 	elif categoryName == 'Drone':
-		slotname = "G Drone"
+		slotorder = "G"
+		slotname = "Drone"
 	elif categoryName == 'Implant':
-		slotname = "H Implant"
+		slotorder = "H"
+		slotname = "Implant"
 	else:
-		slotname = "Z Unknown"
+		slotorder = "Z"
+		slotname = "Unknown"
 
-	return slotname
+	return slotorder, slotname
 
 def fetch_itemid(itemList):
 	itemDict = dict()
@@ -175,15 +185,16 @@ def get_fit_price(form_data):
 			if element.tag == "type":
 				itemName = itemDict[ship][element.attrib['id']]
 				itemQuantity = itemList[ship][itemName]
+				slotorder, slotname = get_slot(itemName)
 				buy = float(element.xpath("buy/max")[0].text)
 				sell = float(element.xpath("sell/min")[0].text)
 				buy_subtotal = buy * itemQuantity
 				sell_subtotal = sell * itemQuantity
 				buy_total += buy_subtotal
 				sell_total += sell_subtotal
-				output[ship].append({'name': itemName, 'quantity': itemQuantity, 'slot': get_slot(itemName), 'buy': add_commas(buy), 'sell': add_commas(sell)})
+				output[ship].append({'name': itemName, 'quantity': itemQuantity, 'slotorder': slotorder, 'slotname': slotname, 'buy': add_commas(buy), 'sell': add_commas(sell)})
 
-		output[ship].sort(key=itemgetter('slot'))
+		output[ship].sort(key=itemgetter('slotorder'))
 		output[ship].append({'name': None, 'quantity': None, 'buy': add_commas(buy_total), 'sell': add_commas(sell_total)})
 
 	#logger.debug("output: {0} badItemList: {1}".format(output, badItemList))
