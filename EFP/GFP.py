@@ -13,6 +13,10 @@ invTypes = Invtypes.objects.using(staticDB)
 invCategories = Invcategories.objects.using(staticDB)
 invGroups = Invgroups.objects.using(staticDB)
 
+class itemDataObj:
+	itemList = dict()
+	ship_name = ""
+
 def set_item_quantity(itemData, itemName, quantity):
 	inc = 1
 	if quantity:
@@ -27,9 +31,7 @@ def add_commas(foo):
 	return "{0:,}".format(foo)
 
 def parse_xml_fit(fit_data):
-	class itemData:
-		itemList = dict()
-		ship_name = ""
+	itemData = itemDataObj()
 
 	try:
 		root = etree.fromstring(fit_data)
@@ -54,9 +56,7 @@ def parse_xml_fit(fit_data):
 	return itemData.itemList
 
 def parse_eft_fit(fit_data):
-	class itemData:
-		itemList = dict()
-		ship_name = ""
+	itemData = itemDataObj()
 
 	for line in fit_data.splitlines():
 		try:
@@ -85,11 +85,11 @@ def parse_fit(fit_data):
 		return parse_eft_fit(fit_data)
 
 def get_slot(item):
-	groupid = invTypes.get(typename=item).groupid
-	categoryid = invGroups.get(groupid=int(groupid)).categoryid
-	categoryname = invCategories.get(categoryid=int(categoryid)).categoryname
+	groupID = invTypes.get(typename=item).groupid
+	categoryID = invGroups.get(groupid=int(groupID)).categoryid
+	categoryName = invCategories.get(categoryid=int(categoryID)).categoryname
 
-	if categoryname == 'Module':
+	if categoryName == 'Module':
 		eve_static_cur = connections['eve_static'].cursor()
 		eve_static_cur.execute("SELECT TRIM(effect.effectName) AS slot FROM invTypes AS type INNER JOIN dgmTypeEffects AS typeEffect ON type.typeID = typeEffect.typeID INNER JOIN dgmEffects AS effect ON typeEffect.effectID = effect.effectID WHERE effect.effectName IN ('loPower', 'medPower', 'hiPower', 'rigSlot') AND type.typeName = %s;", [item])
 		try:
@@ -97,7 +97,6 @@ def get_slot(item):
 		except:
 			return "Z Unknown"
 
-		# slot mapping from the weirdness in the db to reality
 		if slot == "hiPower":
 			slotname = "A High Power"
 		elif slot == "medPower":
@@ -108,13 +107,14 @@ def get_slot(item):
 			slotname = "D Rig Slot"
 		else:
 			slotname = "Z Unknown"
-	elif categoryname == 'Subsystem':
+
+	elif categoryName == 'Subsystem':
 		slotname = "E Subsystem"
-	elif categoryname == 'Ship':
+	elif categoryName == 'Ship':
 		slotname = "F Ship"
-	elif categoryname == 'Drone':
+	elif categoryName == 'Drone':
 		slotname = "G Drone"
-	elif categoryname == 'Implant':
+	elif categoryName == 'Implant':
 		slotname = "H Implant"
 	else:
 		slotname = "Z Unknown"
