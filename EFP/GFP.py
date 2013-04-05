@@ -1,6 +1,6 @@
 import urllib, re, logging
 from operator import itemgetter
-from models import Invtypes, Invnames
+from models import Invtypes, Invnames, Invcategories, Invgroups
 from lxml import etree
 from django.db import connections
 
@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 
 invNames = Invnames.objects.using(staticDB)
 invTypes = Invtypes.objects.using(staticDB)
+invCategories = Invcategories.objects.using(staticDB)
+invGroups = Invgroups.objects.using(staticDB)
 
 def set_item_quantity(itemData, itemName, quantity):
 	inc = 1
@@ -83,28 +85,37 @@ def parse_fit(fit_data):
 		return parse_eft_fit(fit_data)
 
 def get_slot(item):
-	eve_static_cur = connections['eve_static'].cursor()
-	eve_static_cur.execute("SELECT TRIM(effect.effectName) AS slot FROM invTypes AS type INNER JOIN dgmTypeEffects AS typeEffect ON type.typeID = typeEffect.typeID INNER JOIN dgmEffects AS effect ON typeEffect.effectID = effect.effectID WHERE effect.effectName IN ('loPower', 'medPower', 'hiPower', 'rigSlot', 'subSystem', 'targetAttack', 'massFactor', 'targetArmorRepair', 'mining', 'salvageDroneEffect') AND type.typeName = %s;", [item])
-	try:
-		slot = eve_static_cur.fetchone()[0]
-	except:
-		return "Z Unknown"
+	groupid = invTypes.get(typename=item).groupid
+	categoryid = invGroups.get(groupid=int(groupid)).categoryid
+	categoryname = invCategories.get(categoryid=int(categoryid)).categoryname
 
-	# slot mapping from the weirdness in the db to reality
-	if slot == "loPower":
-		slotname = "C Low Power"
-	elif slot == "medPower":
-		slotname = "B Medium Power"
-	elif slot == "hiPower":
-		slotname = "A High Power"
-	elif slot == "rigSlot":
-		slotname = "D Rig Slot"
-	elif slot == "subSystem":
+	if categoryname == 'Module':
+		eve_static_cur = connections['eve_static'].cursor()
+		eve_static_cur.execute("SELECT TRIM(effect.effectName) AS slot FROM invTypes AS type INNER JOIN dgmTypeEffects AS typeEffect ON type.typeID = typeEffect.typeID INNER JOIN dgmEffects AS effect ON typeEffect.effectID = effect.effectID WHERE effect.effectName IN ('loPower', 'medPower', 'hiPower', 'rigSlot') AND type.typeName = %s;", [item])
+		try:
+			slot = eve_static_cur.fetchone()[0]
+		except:
+			return "Z Unknown"
+
+		# slot mapping from the weirdness in the db to reality
+		if slot == "hiPower":
+			slotname = "A High Power"
+		elif slot == "medPower":
+			slotname = "B Medium Power"
+		elif slot == "loPower":
+			slotname = "C Low Power"
+		elif slot == "rigSlot":
+			slotname = "D Rig Slot"
+		else:
+			slotname = "Z Unknown"
+	elif categoryname == 'Subsystem':
 		slotname = "E Subsystem"
-	elif slot == "targetAttack" or slot == "targetArmorRepair" or slot == 'mining' or slot == 'salvageDroneEffect':
-		slotname = "F Drone"
-	elif slot == "massFactor":
-		slotname = "G Hull"
+	elif categoryname == 'Ship':
+		slotname = "F Ship"
+	elif categoryname == 'Drone':
+		slotname = "G Drone"
+	elif categoryname == 'Implant':
+		slotname = "H Implant"
 	else:
 		slotname = "Z Unknown"
 
