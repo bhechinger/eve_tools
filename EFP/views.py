@@ -1,8 +1,9 @@
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django import forms
-from EFP.models import Invnames
-import GFP
+from EFP.models import Invnames, Fitting
+import pickle
+from GFP import GetFittingPrice
 
 staticDB = 'eve_static'
 invNames = Invnames.objects.using(staticDB)
@@ -23,7 +24,8 @@ def index(request):
 		form = FitForm(request.POST, request.FILES) # A form bound to the POST data
 		if form.is_valid(): # All validation rules pass
 			#output, badItemList = GFP.get_fit_price(form.cleaned_data, request.FILES)
-			output, badItemList, error_message = GFP.get_fit_price(form.cleaned_data)
+			doit = GetFittingPrice()
+			output, badItemList, error_message = doit.get_fit_price(form.cleaned_data)
 			return render(request, 'EFP/results.html', {
 				'error_message': error_message,
 				'output': output,
@@ -35,3 +37,20 @@ def index(request):
 	return render(request, 'EFP/index.html', {
 		'form': form,
 	})
+
+def html(request, ship_id, systemID):
+	doit = GetFittingPrice()
+	output, badItemList, error_message = doit.get_from_db(ship_id, systemID)
+	return render(request, 'EFP/results.html', {
+		'error_message': error_message,
+		'output': output,
+		'badItemList': badItemList,
+	})
+
+def text(request, ship_id):
+	ship_data = get_object_or_404(Fitting, pk=ship_id)
+	ship = pickle.loads(ship_data.fitting)
+	return render(request, 'EFP/text.html', {
+		'ship': ship
+	})
+

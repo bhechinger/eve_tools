@@ -3,7 +3,6 @@
 
 {% for ship, fitting in output.items %}
 	<h1>{{ ship }}</h1>
-
 	<table border="1">
 		<tr>
 			<td align="center"><b>Slot</b></td>
@@ -14,6 +13,9 @@
 		</tr>
 
 	{% for row in fitting %}
+		{% if row.ship_id %}
+			<h3>Ship ID {{ row.ship_id }}</h3>
+		{% endif %}
 		<tr>
 		{% if row.name %}
 			<td align="left">{{ row.slotname }}</td>

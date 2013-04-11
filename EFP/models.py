@@ -10,6 +10,13 @@ from django.db import models
 # Also note: You'll have to insert the output of 'django-admin.py sqlcustom [appname]'
 # into your database.
 
+class Fitting(models.Model):
+	item_dict = models.TextField()
+	item_list = models.TextField()
+	name = models.CharField(max_length=1000L)
+	def __unicode__(self):
+		return self.name
+
 class Agtagenttypes(models.Model):
     agenttypeid = models.IntegerField(primary_key=True, db_column='agentTypeID') # Field name made lowercase.
     agenttype = models.CharField(max_length=50L, db_column='agentType', blank=True) # Field name made lowercase.

@@ -5,4 +5,6 @@ from EFP import views
 
 urlpatterns = patterns('',
 	url(r'^$', views.index, name='index'),
+	url(r'^(?P<ship_id>\d+)/text/$', 'EFP.views.text', name='text'),
+	url(r'^(?P<ship_id>\d+)/(?P<systemID>.+)/html/$', 'EFP.views.html', name='html'),
 )
