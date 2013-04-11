@@ -2,7 +2,8 @@ import urllib, re, logging, pickle
 from operator import itemgetter
 from models import Invtypes, Invnames, Invcategories, Invgroups, Fitting
 from lxml import etree
-from django.db import connections, IntegrityError
+from django.db import connections
+from django.core.exceptions import ObjectDoesNotExist
 
 class GetFittingPrice:
 	url="http://api.eve-central.com/api/marketstat"
@@ -200,7 +201,11 @@ class GetFittingPrice:
 		return self.output, self.badItemList, None
 
 	def get_from_db(self, ship_id, systemID):
-		self.systemID = self.invNames.get(itemname=systemID).itemid
+		try:
+			self.systemID = self.invNames.get(itemname=systemID).itemid
+		except(ObjectDoesNotExist):
+			return None, None, "Error: System '{0}' Not Found".format(systemID)
+
 		ship = self.fitting.get(id=ship_id)
 		self.ship_id[ship.name] = None
 		self.itemDict[ship.name] = pickle.loads(ship.item_dict)
