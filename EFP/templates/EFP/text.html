@@ -1,1 +1,28 @@
+<pre>
+{% for ship, fitting in output.items %}
 {{ ship }}
+Slot Name Quantity Buy Sell
+	{% for row in fitting %}
+		{% if row.ship_id %}
+Ship ID {{ row.ship_id }}
+		{% endif %}
+		{% if row.name %}
+{{ row.slotname }} {{ row.name }} {{ row.quantity }} {{ row.buy }} {{ row.sell }}
+		{% else %}
+                                                     {{ row.buy }} {{ row.sell }}
+		{% endif %}
+	{% endfor %}
+
+	{% for badShip, badList in badItemList.items %}
+		{% if badShip == ship %}
+			{% if badList %}
+Items not found in the database:
+				{% for bad in badList %}
+* {{ bad }}
+				{% endfor %}
+			{% endif %}
+		{% endif %}
+	{% endfor %}
+
+{% endfor %}
+</pre>

@@ -47,10 +47,11 @@ def html(request, ship_id, systemID):
 		'badItemList': badItemList,
 	})
 
-def text(request, ship_id):
-	ship_data = get_object_or_404(Fitting, pk=ship_id)
-	ship = pickle.loads(ship_data.fitting)
+def text(request, ship_id, systemID):
+	doit = GetFittingPrice()
+	output, badItemList, error_message = doit.get_from_db(ship_id, systemID)
 	return render(request, 'EFP/text.html', {
-		'ship': ship
+		'error_message': error_message,
+		'output': output,
+		'badItemList': badItemList,
 	})
-
