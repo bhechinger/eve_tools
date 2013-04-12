@@ -40,7 +40,7 @@ def index(request):
 
 def html(request, ship_id, systemID):
 	doit = GetFittingPrice()
-	output, badItemList, error_message = doit.get_from_db(ship_id, systemID)
+	output, badItemList, error_message = doit.get_from_db_html(ship_id, systemID)
 	return render(request, 'EFP/results.html', {
 		'error_message': error_message,
 		'output': output,
@@ -49,9 +49,10 @@ def html(request, ship_id, systemID):
 
 def text(request, ship_id, systemID):
 	doit = GetFittingPrice()
-	output, badItemList, error_message = doit.get_from_db(ship_id, systemID)
-	return render(request, 'EFP/text.html', {
-		'error_message': error_message,
-		'output': output,
-		'badItemList': badItemList,
-	})
+	output = doit.get_from_db_text(ship_id, systemID)
+	return HttpResponse(output, content_type="text/plain")
+	#return render(request, 'EFP/text.html', {
+	#	'error_message': error_message,
+	#	'output': output,
+	#	'badItemList': badItemList,
+	#})

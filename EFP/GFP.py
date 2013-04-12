@@ -6,6 +6,8 @@ from django.db import connections
 from django.core.exceptions import ObjectDoesNotExist
 
 class GetFittingPrice:
+	PRE=0
+	POST=1
 	url="http://api.eve-central.com/api/marketstat"
 	logger = logging.getLogger(__name__)
 
@@ -35,7 +37,7 @@ class GetFittingPrice:
 			self.itemList[self.ship_name][itemName] = inc
 
 	def add_commas(self, foo):
-		return "{0:,}".format(foo)
+		return "{0:,.2f}".format(foo)
 
 	def parse_xml_fit(self):
 		try:
@@ -183,7 +185,7 @@ class GetFittingPrice:
 					self.output[ship].append({'name': itemName, 'quantity': itemQuantity, 'slotorder': slotorder, 'slotname': slotname, 'buy': self.add_commas(buy), 'sell': self.add_commas(sell)})
 
 			self.output[ship].sort(key=itemgetter('slotorder'))
-			self.output[ship].append({'name': None, 'quantity': None, 'buy': self.add_commas(buy_total), 'sell': self.add_commas(sell_total)})
+			self.output[ship].append({'name': None, 'quantity': None, 'slotorder': None, 'slotname': None, 'buy': self.add_commas(buy_total), 'sell': self.add_commas(sell_total)})
 			self.output[ship].append({'ship_id': self.ship_id[ship]})
 
 	def get_fit_price(self, form_data):
@@ -212,3 +214,95 @@ class GetFittingPrice:
 		self.itemList[ship.name] = pickle.loads(ship.item_list)
 		self.get_prices()
 		return self.output, self.badItemList, None
+
+	def get_from_db_html(self, ship_ip, systemID):
+		return self.get_from_db(ship_ip, systemID)
+
+	def get_longest_string(self):
+		name_length = 0
+		slotname_length = 0
+		sell_length = 0
+		buy_length = 0
+		quantity_length = 0
+
+		for ship in self.output:
+			for module in self.output[ship]:
+				try:
+					tmp_name_length = len(module['name'])
+					if tmp_name_length > name_length:
+						name_length = tmp_name_length
+				except(TypeError, KeyError):
+					pass
+
+				try:
+					tmp_slotname_length = len(module['slotname'])
+					if tmp_slotname_length > slotname_length:
+						slotname_length = tmp_slotname_length
+				except(TypeError, KeyError):
+					pass
+
+				try:
+					tmp_sell_length = len(module['sell'])
+					if tmp_sell_length > sell_length:
+						sell_length = tmp_sell_length
+				except(TypeError, KeyError):
+					pass
+
+				try:
+					tmp_buy_length = len(module['buy'])
+					if tmp_buy_length > buy_length:
+						buy_length = tmp_buy_length
+				except(TypeError, KeyError):
+					pass
+
+				try:
+					tmp_quantity_length = len(str(module['quantity']))
+					if tmp_quantity_length > quantity_length:
+						quentity_length = tmp_quantity_length
+				except(TypeError, KeyError):
+					pass
+
+		return name_length, slotname_length, sell_length, buy_length, quantity_length
+
+	def pad(self, input_string, length, side):
+		if not input_string or input_string == "None":
+			input_string = " "
+
+		pad_string = " " * (length - len(input_string) + 2)
+		if side == self.PRE:
+			return "{0}{1}".format(pad_string, input_string)
+		elif side == self.POST:
+			return "{0}{1}".format(input_string, pad_string)
+		else:
+			self.logger.error("pad(): side unknown: {0}".format(side))
+			return None
+
+	def get_from_db_text(self, ship_ip, systemID):
+		self.get_from_db(ship_ip, systemID)
+		name_length, slotname_length, sell_length, buy_length, quantity_length = self.get_longest_string()
+		for ship in self.output:
+			text_output = "{0}\n\n".format(ship)
+			slotname_header = self.pad("Slot", slotname_length, self.POST)
+			name_header = self.pad("Name", name_length, self.POST)
+			quantity_header = self.pad("Qty", quantity_length, self.POST)
+			buy_header = self.pad("     Buy", buy_length, self.POST)
+			sell_header = self.pad("     Sell", sell_length, self.POST)
+			text_output += "{0} {1} {2} {3} {4}\n".format(slotname_header, name_header, quantity_header, buy_header, sell_header)
+			for module in self.output[ship]:
+				try:
+					if module['ship_id']:
+						continue
+				except(KeyError):
+					try:
+						self.logger.debug("module: {0}".format(module))
+						slotname = self.pad(module['slotname'], slotname_length, self.POST)
+						name = self.pad(module['name'], name_length, self.POST)
+						quantity = self.pad(str(module['quantity']), quantity_length, self.PRE)
+						buy = self.pad(module['buy'], buy_length, self.PRE)
+						sell = self.pad(module['sell'], sell_length, self.PRE)
+						text_output += "{0} {1} {2} {3} {4}\n".format(slotname, name, quantity, buy, sell)
+					except(KeyError):
+						continue
+
+		self.logger.debug("text_output: {0}".format(text_output))
+		return text_output
