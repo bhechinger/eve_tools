@@ -317,12 +317,12 @@ class GetFittingPrice:
 					pass
 
 		xml_doc = etree.tostring(root, pretty_print=True, xml_declaration=True, encoding='UTF-8')
-		self.logger.debug("xml_doc: {0}".format(xml_doc))
+		#self.logger.debug("xml_doc: {0}".format(xml_doc))
 		return xml_doc
 
 	def get_from_db_json(self, ship_id, systemID):
 		self.get_from_db(ship_id, systemID)
 		json_doc = json.dumps(self.output)
 
-		self.logger.debug("json_doc: {0}".format(json_doc))
+		#self.logger.debug("json_doc: {0}".format(json_doc))
 		return json_doc
