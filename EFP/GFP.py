@@ -1,4 +1,4 @@
-import urllib, re, logging, pickle
+import urllib, re, logging, pickle, json
 from operator import itemgetter
 from models import Invtypes, Invnames, Invcategories, Invgroups, Fitting
 from lxml import etree
@@ -304,3 +304,25 @@ class GetFittingPrice:
 						continue
 
 		return text_output
+
+	def get_from_db_xml(self, ship_id, systemID):
+		self.get_from_db(ship_id, systemID)
+		for ship in self.output:
+			tree = etree.Element("fitting_price", ship_id=ship_id, systemID=systemID, ship_name=ship)
+			root = etree.ElementTree(tree)
+			for module in self.output[ship]:
+				try:
+					etree.SubElement(tree, "module", slot=module['slotname'], name=module['name'], quantity=str(module['quantity']), buy=module['buy'], sell=module['sell'])
+				except(TypeError, KeyError):
+					pass
+
+		xml_doc = etree.tostring(root, pretty_print=True, xml_declaration=True, encoding='UTF-8')
+		self.logger.debug("xml_doc: {0}".format(xml_doc))
+		return xml_doc
+
+	def get_from_db_json(self, ship_id, systemID):
+		self.get_from_db(ship_id, systemID)
+		json_doc = json.dumps(self.output)
+
+		self.logger.debug("json_doc: {0}".format(json_doc))
+		return json_doc

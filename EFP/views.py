@@ -51,8 +51,13 @@ def text(request, ship_id, systemID):
 	doit = GetFittingPrice()
 	output = doit.get_from_db_text(ship_id, systemID)
 	return HttpResponse(output, content_type="text/plain")
-	#return render(request, 'EFP/text.html', {
-	#	'error_message': error_message,
-	#	'output': output,
-	#	'badItemList': badItemList,
-	#})
+
+def xml(request, ship_id, systemID):
+	doit = GetFittingPrice()
+	output = doit.get_from_db_xml(ship_id, systemID)
+	return HttpResponse(output, content_type="application/xml")
+
+def json(request, ship_id, systemID):
+	doit = GetFittingPrice()
+	output = doit.get_from_db_json(ship_id, systemID)
+	return HttpResponse(output, content_type="application/json")
