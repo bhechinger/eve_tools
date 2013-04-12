@@ -294,7 +294,6 @@ class GetFittingPrice:
 						continue
 				except(KeyError):
 					try:
-						self.logger.debug("module: {0}".format(module))
 						slotname = self.pad(module['slotname'], slotname_length, self.POST)
 						name = self.pad(module['name'], name_length, self.POST)
 						quantity = self.pad(str(module['quantity']), quantity_length, self.PRE)
@@ -304,5 +303,4 @@ class GetFittingPrice:
 					except(KeyError):
 						continue
 
-		self.logger.debug("text_output: {0}".format(text_output))
 		return text_output
