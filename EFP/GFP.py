@@ -22,22 +22,47 @@ class GetFittingPrice:
 	fit_data = None
 	ship_name = ""
 	itemList = dict()
-	itemDict = dict()
 	badItemList = dict()
 	output = dict()
+
+	def get_itemid(self, item):
+		try:
+			itemID = str(self.invTypes.get(typename=item).typeid)
+
+			try:
+				if self.itemList[self.ship_name][itemID]:
+					pass
+			except:
+				self.itemList[self.ship_name][itemID] = dict()
+				self.itemList[self.ship_name][itemID]['name'] = item
+
+			return itemID
+		except:
+			self.badItemList[ship].add(item)
+			return None
+
 
 	def set_item_quantity(self, itemName, quantity):
 		inc = 1
 		if quantity:
 			inc = quantity
 
+		itemID = self.get_itemid(itemName)
+
+		if not itemID:
+			return
+
 		try:
-			self.itemList[self.ship_name][itemName] += inc
+			self.itemList[self.ship_name][itemID]['quantity'] += inc
 		except:
-			self.itemList[self.ship_name][itemName] = inc
+			self.itemList[self.ship_name][itemID]['quantity'] = inc
 
 	def add_commas(self, foo):
 		return "{0:,.2f}".format(foo)
+
+	def init_data(self):
+		self.itemList[self.ship_name] = dict()
+		self.badItemList[self.ship_name] = set()
 
 	def parse_xml_fit(self):
 		try:
@@ -48,7 +73,7 @@ class GetFittingPrice:
 
 		for ship in root:
 			self.ship_name = ship.attrib['name']
-			self.itemList[self.ship_name] = dict()
+			self.init_data()
 			for fitting in ship:
 				if fitting.tag != "description":
 					if fitting.tag == "shipType":
@@ -66,7 +91,7 @@ class GetFittingPrice:
 				if line[0] == "[":
 					if not re.search("^\[empty", line):
 						self.ship_name = line.rstrip().split(",")[1][1:-2]
-						self.itemList[self.ship_name] = dict()
+						self.init_data()
 						self.set_item_quantity(line.rstrip().split(",")[0][1:], None)
 				else:
 					item = line.rstrip()
@@ -132,29 +157,16 @@ class GetFittingPrice:
 
 		return slotorder, slotname
 
-	def fetch_itemid(self):
-		for ship in self.itemList:
-			self.itemDict[ship] = dict()
-			self.badItemList[ship] = set()
-			for item in self.itemList[ship]:
-				try:
-					self.itemDict[ship][str(self.invTypes.get(typename=item).typeid)] = item
-				# need to figure out why this doesn't work:
-				# Exception Value:	global name 'DoesNotExist' is not defined
-				#except(Invtypes.DoesNotExist):
-				except:
-					self.badItemList[ship].add(item)
-
-			itemList_pkl = pickle.dumps(self.itemList[ship])
-			itemDict_pkl = pickle.dumps(self.itemDict[ship])
-			new_ship = self.fitting.create(name=ship, item_list=itemList_pkl, item_dict=itemDict_pkl)
-			new_ship.save()
-			self.ship_id[ship] = new_ship.id
+	def save_fitting(self, ship):
+		itemList_pkl = pickle.dumps(self.itemList[ship])
+		new_ship = self.fitting.create(name=ship, item_list=itemList_pkl)
+		new_ship.save()
+		self.ship_id[ship] = new_ship.id
 
 	def get_prices(self):
-		for ship in self.itemDict:
+		for ship in self.itemList:
 			# It's easier to construct our own POST data than to use urlencode
-			post_data="usesystem={0}&typeid={1}".format(str(self.systemID), "&typeid=".join(self.itemDict[ship]))
+			post_data="usesystem={0}&typeid={1}".format(str(self.systemID), "&typeid=".join(self.itemList[ship]))
 			url_data = "{0}/?{1}".format(self.url, post_data)
 			#self.logger.debug("data url: {0}".format(url_data))
 			#try:
@@ -173,8 +185,8 @@ class GetFittingPrice:
 
 			for element in tree.iter():
 				if element.tag == "type":
-					itemName = self.itemDict[ship][element.attrib['id']]
-					itemQuantity = self.itemList[ship][itemName]
+					itemName = self.itemList[ship][element.attrib['id']]['name']
+					itemQuantity = self.itemList[ship][element.attrib['id']]['quantity']
 					slotorder, slotname = self.get_slot(itemName)
 					buy = float(element.xpath("buy/max")[0].text)
 					sell = float(element.xpath("sell/min")[0].text)
@@ -198,8 +210,10 @@ class GetFittingPrice:
 
 		self.systemID = self.invNames.get(itemname=form_data['system']).itemid
 		self.parse_fit()
-		self.fetch_itemid()
 		self.get_prices()
+		for ship in self.itemList:
+			self.save_fitting(ship)
+
 		return self.output, self.badItemList, None
 
 	def get_from_db(self, ship_id, systemID):
@@ -209,9 +223,9 @@ class GetFittingPrice:
 			return None, None, "Error: System '{0}' Not Found".format(systemID)
 
 		ship = self.fitting.get(id=ship_id)
-		self.ship_id[ship.name] = None
-		self.itemDict[ship.name] = pickle.loads(ship.item_dict)
+		self.ship_id[ship.name] = ship_id
 		self.itemList[ship.name] = pickle.loads(ship.item_list)
+		self.logger.debug("Fitting: {0}".format(self.itemList))
 		self.get_prices()
 		return self.output, self.badItemList, None
 
