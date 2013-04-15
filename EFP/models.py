@@ -11,7 +11,6 @@ from django.db import models
 # into your database.
 
 class Fitting(models.Model):
-	item_dict = models.TextField()
 	item_list = models.TextField()
 	name = models.CharField(max_length=1000L)
 	def __unicode__(self):

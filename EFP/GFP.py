@@ -210,9 +210,11 @@ class GetFittingPrice:
 
 		self.systemID = self.invNames.get(itemname=form_data['system']).itemid
 		self.parse_fit()
-		self.get_prices()
+
 		for ship in self.itemList:
 			self.save_fitting(ship)
+
+		self.get_prices()
 
 		return self.output, self.badItemList, None
 
@@ -225,7 +227,7 @@ class GetFittingPrice:
 		ship = self.fitting.get(id=ship_id)
 		self.ship_id[ship.name] = ship_id
 		self.itemList[ship.name] = pickle.loads(ship.item_list)
-		self.logger.debug("Fitting: {0}".format(self.itemList))
+		#self.logger.debug("Fitting: {0}".format(self.itemList))
 		self.get_prices()
 		return self.output, self.badItemList, None
 
@@ -326,7 +328,18 @@ class GetFittingPrice:
 			root = etree.ElementTree(tree)
 			for module in self.output[ship]:
 				try:
-					etree.SubElement(tree, "module", slot=module['slotname'], name=module['name'], quantity=str(module['quantity']), buy=module['buy'], sell=module['sell'])
+					if module['name']:
+						m = etree.SubElement(tree, "module")
+						etree.SubElement(m, "slot").text = module['slotname']
+						etree.SubElement(m, "name").text = module['name']
+						etree.SubElement(m, "quantity").text = str(module['quantity'])
+						etree.SubElement(m, "buy").text = module['buy']
+						etree.SubElement(m, "sell").text = module['sell']
+					else:
+						m = etree.SubElement(tree, "total")
+						etree.SubElement(m, "buy").text = module['buy']
+						etree.SubElement(m, "sell").text = module['sell']
+						
 				except(TypeError, KeyError):
 					pass
 
