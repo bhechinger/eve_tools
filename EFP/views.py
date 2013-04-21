@@ -61,3 +61,8 @@ def json(request, ship_id, systemID):
 	doit = GetFittingPrice()
 	output = doit.get_from_db_json(ship_id, systemID)
 	return HttpResponse(output, content_type="application/json")
+
+def xml_fit(request, ship_id):
+	doit = GetFittingPrice()
+	output = doit.get_from_db_xml_fit(ship_id)
+	return HttpResponse(output, content_type="application/xml")

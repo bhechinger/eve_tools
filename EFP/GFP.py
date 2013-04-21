@@ -60,7 +60,8 @@ class GetFittingPrice:
 	def add_commas(self, foo):
 		return "{0:,.2f}".format(foo)
 
-	def init_data(self):
+	def init_data(self, ship_name):
+		self.ship_name = ship_name
 		self.itemList[self.ship_name] = dict()
 		self.badItemList[self.ship_name] = set()
 
@@ -72,8 +73,7 @@ class GetFittingPrice:
 			return None
 
 		for ship in root:
-			self.ship_name = ship.attrib['name']
-			self.init_data()
+			self.init_data(ship.attrib['name'])
 			for fitting in ship:
 				if fitting.tag != "description":
 					if fitting.tag == "shipType":
@@ -90,8 +90,7 @@ class GetFittingPrice:
 			try:
 				if line[0] == "[":
 					if not re.search("^\[empty", line):
-						self.ship_name = line.rstrip().split(",")[1][1:-2]
-						self.init_data()
+						self.init_data(line.rstrip().split(",")[1][1:-2])
 						self.set_item_quantity(line.rstrip().split(",")[0][1:], None)
 				else:
 					item = line.rstrip()
@@ -219,16 +218,18 @@ class GetFittingPrice:
 		return self.output, self.badItemList, None
 
 	def get_from_db(self, ship_id, systemID):
-		try:
-			self.systemID = self.invNames.get(itemname=systemID).itemid
-		except(ObjectDoesNotExist):
-			return None, None, "Error: System '{0}' Not Found".format(systemID)
+		if systemID:
+			try:
+				self.systemID = self.invNames.get(itemname=systemID).itemid
+			except(ObjectDoesNotExist):
+				return None, None, "Error: System '{0}' Not Found".format(systemID)
 
 		ship = self.fitting.get(id=ship_id)
 		self.ship_id[ship.name] = ship_id
 		self.itemList[ship.name] = pickle.loads(ship.item_list)
 		#self.logger.debug("Fitting: {0}".format(self.itemList))
-		self.get_prices()
+		if systemID:
+			self.get_prices()
 		return self.output, self.badItemList, None
 
 	def get_from_db_html(self, ship_ip, systemID):
@@ -343,6 +344,28 @@ class GetFittingPrice:
 				except(TypeError, KeyError):
 					pass
 
+		xml_doc = etree.tostring(root, pretty_print=True, xml_declaration=True, encoding='UTF-8')
+		#self.logger.debug("xml_doc: {0}".format(xml_doc))
+		return xml_doc
+
+	def get_from_db_xml_fit(self, ship_id):
+		self.get_from_db(ship_id, None)
+		for ship in self.itemList:
+			#self.logger.debug("ship: {0}".format(ship))
+			#self.logger.debug("itemList[ship]: {0}".format(self.itemList[ship]))
+
+			tree = etree.Element("fittings")
+			root = etree.ElementTree(tree)
+			fitting = etree.SubElemnt(tree, "fitting", name=ship)
+			etree.SubElement(fitting, "description", value="")
+			for module in self.itemList[ship]:
+				self.logger.debug("module: {0}".format(module))
+			#	if module['name']:
+			#		if module['slotname'] == "Ship":
+			#			etree.SubElement(fitting, "shipType", value=module['name'])
+#
+#					etree.SubElement(fitting, "hardware", slot=module['slotname'], type=module['name'])
+						
 		xml_doc = etree.tostring(root, pretty_print=True, xml_declaration=True, encoding='UTF-8')
 		#self.logger.debug("xml_doc: {0}".format(xml_doc))
 		return xml_doc
