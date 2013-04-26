@@ -22,6 +22,7 @@ class GetFittingPrice:
 	fit_data = None
 	ship_name = ""
 	itemList = dict()
+	fittings = dict()
 	badItemList = dict()
 	output = dict()
 
@@ -64,6 +65,18 @@ class GetFittingPrice:
 		self.ship_name = ship_name
 		self.itemList[self.ship_name] = dict()
 		self.badItemList[self.ship_name] = set()
+		#
+		# New data structure
+		#
+		self.fittings[self.ship_name] = dict()
+		self.fittings[self.ship_name]["description"] = ""
+		self.fittings[self.ship_name]["shipType"] = ""
+		self.fittings[self.ship_name]["hi slot"] = {k : "" for k in range(8)}
+		self.fittings[self.ship_name]["med slot"] = {k : "" for k in range(8)}
+		self.fittings[self.ship_name]["low slot"] = {k : "" for k in range(8)}
+		self.fittings[self.ship_name]["rig slot"] = {k : "" for k in range(3)}
+		self.fittings[self.ship_name]["subsystem slot"] = {k : "" for k in range(5)}
+		self.fittings[self.ship_name]["drone bay"] = dict()
 
 	def parse_xml_fit(self):
 		try:
