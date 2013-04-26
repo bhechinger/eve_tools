@@ -351,15 +351,15 @@ class GetFittingPrice:
 	def get_from_db_xml_fit(self, ship_id):
 		self.get_from_db(ship_id, None)
 		for ship in self.itemList:
-			#self.logger.debug("ship: {0}".format(ship))
-			#self.logger.debug("itemList[ship]: {0}".format(self.itemList[ship]))
+			self.logger.debug("ship: {0}".format(ship))
+			self.logger.debug("itemList[ship]: {0}".format(self.itemList[ship]))
 
 			tree = etree.Element("fittings")
 			root = etree.ElementTree(tree)
-			fitting = etree.SubElemnt(tree, "fitting", name=ship)
+			fitting = etree.SubElement(tree, "fitting", name=ship)
 			etree.SubElement(fitting, "description", value="")
 			for module in self.itemList[ship]:
-				self.logger.debug("module: {0}".format(module))
+				self.logger.debug("module: {0} {1}".format(module, self.itemList[ship][module]))
 			#	if module['name']:
 			#		if module['slotname'] == "Ship":
 			#			etree.SubElement(fitting, "shipType", value=module['name'])
