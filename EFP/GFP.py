@@ -5,11 +5,113 @@ from lxml import etree
 from django.db import connections
 from django.core.exceptions import ObjectDoesNotExist
 
+logger = logging.getLogger(__name__)
+
+class FitData:
+	group = ""
+	value = ""
+	slot_num = None
+	qty = None
+
+
+class ShipFit:
+	ship_name = ""
+	badItemList = dict()
+	fittings = dict()
+
+
+class ShipFitting:
+	ship_fit = ShipFit()
+
+	_cur_slot = dict()
+	_fit_data = None
+
+	def __init__(self, fit_data):
+		self._fit_data = fit_data
+
+		if re.search("^\<\?xml", self._fit_data):
+			self._parse_xml_fit()
+		else:
+			self._parse_eft_fit()
+
+	def _init_data(self, ship_name):
+		self.ship_fit.ship_name = ship_name
+		self.ship_fit.badItemList[self.ship_fit.ship_name] = set()
+		#
+		# New data structure
+		#
+		self.ship_fit.fittings[self.ship_fit.ship_name] = dict()
+		self.ship_fit.fittings[self.ship_fit.ship_name]["description"] = ""
+		self.ship_fit.fittings[self.ship_fit.ship_name]["shipType"] = ""
+		self.ship_fit.fittings[self.ship_fit.ship_name]["hi slot"] = {k : "" for k in range(8)}
+		self.ship_fit.fittings[self.ship_fit.ship_name]["med slot"] = {k : "" for k in range(8)}
+		self.ship_fit.fittings[self.ship_fit.ship_name]["low slot"] = {k : "" for k in range(8)}
+		self.ship_fit.fittings[self.ship_fit.ship_name]["rig slot"] = {k : "" for k in range(3)}
+		self.ship_fit.fittings[self.ship_fit.ship_name]["subsystem slot"] = {k : "" for k in range(5)}
+		self.ship_fit.fittings[self.ship_fit.ship_name]["drone bay"] = dict()
+
+		# These are used for the EFT parser but we'll initialize them here
+		self._cur_slot["hi slot"] = 0
+		self._cur_slot["med slot"] = 0
+		self._cur_slot["low slot"] = 0
+		self._cur_slot["rig slot"] = 0
+		self._cur_slot["subsystem slot"] = 0
+
+	def _populate_fittings(self, fit_data):
+		try:
+			if fit_data.group == "drone bay":
+				self.ship_fit.fittings[self.ship_fit.ship_name][fit_data.group][fit_data.value] = fit_data.qty
+			elif fit_data.group == "description" or fit_data.group == "shipType":
+				self.ship_fit.fittings[self.ship_fit.ship_name][fit_data.group] = fit_data.value
+			else:
+				self.ship_fit.fittings[self.ship_fit.ship_name][fit_data.group][fit_data.slot_num] = fit_data.value
+		except(TypeError):
+			logger.debug("_populate_fittings(): fit_data.value is something odd")
+
+	def _parse_xml_fit(self):
+		try:
+			root = etree.fromstring(self._fit_data)
+		except(etree.ParseError):
+			# parse error, figure out how to pass that back
+			return None
+
+		for ship in root:
+			self._init_data(ship.attrib['name'])
+			for fitting in ship:
+				self._fit_data = FitData()
+				if fitting.tag == "description" or fitting.tag == "shipType":
+					self._fit_data.group = fitting.tag
+					self._fit_data.value = fitting.attrib['value']
+					logger.debug("self._fit_data.value1: {0}".format(fitting.attrib['value']))
+
+				elif fitting.tag == "hardware":
+					# I would like to come back to cargo at some point, but I'm skipping it for now
+					if fitting.attrib['slot'] == "cargo":
+						continue
+
+					if fitting.attrib['slot'] == "drone bay":
+						self._fit_data.qty = int(fitting.attrib['qty'])
+						self._fit_data.group = fitting.attrib['slot']
+
+					else:
+						# Extract the module group and slot number
+						q = re.search(" \d+$", fitting.attrib['slot'])
+
+						self._fit_data.slot_num = int(q.group(0)[1:])
+						self._fit_data.group = fitting.attrib['slot'][:q.start()]
+
+					self._fit_data.value = fitting.attrib['type']
+					logger.debug("self._fit_data.value1: {0}".format(fitting.attrib['type']))
+
+				self._populate_fittings(self._fit_data)
+
+	def get(self):
+		return(self.ship_fit)
+
 class GetFittingPrice:
 	PRE=0
 	POST=1
 	url="http://api.eve-central.com/api/marketstat"
-	logger = logging.getLogger(__name__)
 
 	staticDB = 'eve_static'
 	invNames = Invnames.objects.using(staticDB)
@@ -19,10 +121,8 @@ class GetFittingPrice:
 	fitting = Fitting.objects
 
 	ship_id = dict()
-	fit_data = None
 	ship_name = ""
 	itemList = dict()
-	fittings = dict()
 	badItemList = dict()
 	output = dict()
 
@@ -42,7 +142,6 @@ class GetFittingPrice:
 			self.badItemList[ship].add(item)
 			return None
 
-
 	def set_item_quantity(self, itemName, quantity):
 		inc = 1
 		if quantity:
@@ -61,49 +160,12 @@ class GetFittingPrice:
 	def add_commas(self, foo):
 		return "{0:,.2f}".format(foo)
 
-	def init_data(self, ship_name):
-		self.ship_name = ship_name
-		self.itemList[self.ship_name] = dict()
-		self.badItemList[self.ship_name] = set()
-		#
-		# New data structure
-		#
-		self.fittings[self.ship_name] = dict()
-		self.fittings[self.ship_name]["description"] = ""
-		self.fittings[self.ship_name]["shipType"] = ""
-		self.fittings[self.ship_name]["hi slot"] = {k : "" for k in range(8)}
-		self.fittings[self.ship_name]["med slot"] = {k : "" for k in range(8)}
-		self.fittings[self.ship_name]["low slot"] = {k : "" for k in range(8)}
-		self.fittings[self.ship_name]["rig slot"] = {k : "" for k in range(3)}
-		self.fittings[self.ship_name]["subsystem slot"] = {k : "" for k in range(5)}
-		self.fittings[self.ship_name]["drone bay"] = dict()
-
-	def parse_xml_fit(self):
-		try:
-			root = etree.fromstring(self.fit_data)
-		except(etree.ParseError):
-			# parse error, figure out how to pass that back
-			return None
-
-		for ship in root:
-			self.init_data(ship.attrib['name'])
-			for fitting in ship:
-				if fitting.tag != "description":
-					if fitting.tag == "shipType":
-						self.set_item_quantity(fitting.attrib['value'], None)
-					elif fitting.tag == "hardware":
-						if fitting.attrib['slot'] != "cargo":
-							qty = None
-							if fitting.attrib['slot'] == "drone bay":
-								qty = int(fitting.attrib['qty'])
-							self.set_item_quantity(fitting.attrib['type'], qty)
-
 	def parse_eft_fit(self):
-		for line in self.fit_data.splitlines():
+		for line in fit_data.splitlines():
 			try:
 				if line[0] == "[":
 					if not re.search("^\[empty", line):
-						self.init_data(line.rstrip().split(",")[1][1:-2])
+						self._init_data(line.rstrip().split(",")[1][1:-2])
 						self.set_item_quantity(line.rstrip().split(",")[0][1:], None)
 				else:
 					item = line.rstrip()
@@ -115,12 +177,6 @@ class GetFittingPrice:
 							self.set_item_quantity(item.split(",")[0], None)
 			except:
 				pass
-
-	def parse_fit(self):
-		if re.search("^\<\?xml", self.fit_data):
-			self.parse_xml_fit()
-		else:
-			self.parse_eft_fit()
 
 	def get_slot(self, item):
 		groupID = self.invTypes.get(typename=item).groupid
@@ -180,11 +236,11 @@ class GetFittingPrice:
 			# It's easier to construct our own POST data than to use urlencode
 			post_data="usesystem={0}&typeid={1}".format(str(self.systemID), "&typeid=".join(self.itemList[ship]))
 			url_data = "{0}/?{1}".format(self.url, post_data)
-			#self.logger.debug("data url: {0}".format(url_data))
+			#logger.debug("data url: {0}".format(url_data))
 			#try:
 			#	tree = etree.parse(url_data)
 			#except(etree.XMLSyntaxError):
-			#	self.logger.error("XML misformed or something?")
+			#	logger.error("XML misformed or something?")
 			#	return None
 
 			f = urllib.urlopen(url_data)
@@ -214,14 +270,16 @@ class GetFittingPrice:
 
 	def get_fit_price(self, form_data):
 		if form_data['file']:
-			self.fit_data = form_data['file'].read()
+			ship_fitting = ShipFitting(form_data['file'].read())
+		elif form_data['fit']:
+			ship_fitting = ShipFitting(form_data['fit'])
 		else:
-			if not form_data['fit']:
-				return None, None, "No file uploaded and no data pasted!!!"
-			self.fit_data = form_data['fit']
+			return None, None, "No file uploaded and no data pasted!!!"
+
 
 		self.systemID = self.invNames.get(itemname=form_data['system']).itemid
-		self.parse_fit()
+		ships = ship_fitting.get()
+		logger.debug("ships: {0}".format(ships.fittings))
 
 		for ship in self.itemList:
 			self.save_fitting(ship)
@@ -240,7 +298,7 @@ class GetFittingPrice:
 		ship = self.fitting.get(id=ship_id)
 		self.ship_id[ship.name] = ship_id
 		self.itemList[ship.name] = pickle.loads(ship.item_list)
-		#self.logger.debug("Fitting: {0}".format(self.itemList))
+		#logger.debug("Fitting: {0}".format(self.itemList))
 		if systemID:
 			self.get_prices()
 		return self.output, self.badItemList, None
@@ -304,7 +362,7 @@ class GetFittingPrice:
 		elif side == self.POST:
 			return "{0}{1}".format(input_string, pad_string)
 		else:
-			self.logger.error("pad(): side unknown: {0}".format(side))
+			logger.error("pad(): side unknown: {0}".format(side))
 			return None
 
 	def get_from_db_text(self, ship_ip, systemID):
@@ -358,21 +416,21 @@ class GetFittingPrice:
 					pass
 
 		xml_doc = etree.tostring(root, pretty_print=True, xml_declaration=True, encoding='UTF-8')
-		#self.logger.debug("xml_doc: {0}".format(xml_doc))
+		#logger.debug("xml_doc: {0}".format(xml_doc))
 		return xml_doc
 
 	def get_from_db_xml_fit(self, ship_id):
 		self.get_from_db(ship_id, None)
 		for ship in self.itemList:
-			self.logger.debug("ship: {0}".format(ship))
-			self.logger.debug("itemList[ship]: {0}".format(self.itemList[ship]))
+			logger.debug("ship: {0}".format(ship))
+			logger.debug("itemList[ship]: {0}".format(self.itemList[ship]))
 
 			tree = etree.Element("fittings")
 			root = etree.ElementTree(tree)
 			fitting = etree.SubElement(tree, "fitting", name=ship)
 			etree.SubElement(fitting, "description", value="")
 			for module in self.itemList[ship]:
-				self.logger.debug("module: {0} {1}".format(module, self.itemList[ship][module]))
+				logger.debug("module: {0} {1}".format(module, self.itemList[ship][module]))
 			#	if module['name']:
 			#		if module['slotname'] == "Ship":
 			#			etree.SubElement(fitting, "shipType", value=module['name'])
@@ -380,12 +438,12 @@ class GetFittingPrice:
 #					etree.SubElement(fitting, "hardware", slot=module['slotname'], type=module['name'])
 						
 		xml_doc = etree.tostring(root, pretty_print=True, xml_declaration=True, encoding='UTF-8')
-		#self.logger.debug("xml_doc: {0}".format(xml_doc))
+		#logger.debug("xml_doc: {0}".format(xml_doc))
 		return xml_doc
 
 	def get_from_db_json(self, ship_id, systemID):
 		self.get_from_db(ship_id, systemID)
 		json_doc = json.dumps(self.output)
 
-		#self.logger.debug("json_doc: {0}".format(json_doc))
+		#logger.debug("json_doc: {0}".format(json_doc))
 		return json_doc
