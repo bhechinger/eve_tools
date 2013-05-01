@@ -98,5 +98,32 @@ class ShipFitting:
 
 				self._populate_fittings(self._fit_data)
 
+	def _parse_eft_fit(self):
+		slot_order = iter(['low slot', 'med slot', 'hi slot', 'rig slot', 'subsystem slot', 'drones'])
+		for line in self._fit_data.splitlines():
+			try:
+				if line == "":
+					logger.debug("BLANK LINE")
+
+				if line[0] == "[":
+					if not re.search("^\[empty", line):
+						header = line.rstrip().split(",")
+						self._init_data(header[1][1:-2]) # Ship name
+						self._fit_data.group = "shipType"
+						self._fit_data.value = header[0][1:]
+				else:
+					item = line.rstrip()
+					if item:
+						q = re.search(" x\d+$", item)
+						if q:
+							pass
+							#self.set_item_quantity(item[:q.start()], int(q.group(0)[2:]))
+						else:
+							pass
+							#self.set_item_quantity(item.split(",")[0], None)
+			except Exception as e:
+				logger.debug("exception: {0}".format(e))
+				logger.debug("exception line: {0}".format(line))
+
 	def get(self):
 		return(self.ship_fit)

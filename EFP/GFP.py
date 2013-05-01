@@ -60,24 +60,6 @@ class GetFittingPrice:
 	def add_commas(self, foo):
 		return "{0:,.2f}".format(foo)
 
-	def parse_eft_fit(self):
-		for line in fit_data.splitlines():
-			try:
-				if line[0] == "[":
-					if not re.search("^\[empty", line):
-						self._init_data(line.rstrip().split(",")[1][1:-2])
-						self.set_item_quantity(line.rstrip().split(",")[0][1:], None)
-				else:
-					item = line.rstrip()
-					if item:
-						q = re.search(" x\d+$", item)
-						if q:
-							self.set_item_quantity(item[:q.start()], int(q.group(0)[2:]))
-						else:
-							self.set_item_quantity(item.split(",")[0], None)
-			except:
-				pass
-
 	def get_slot(self, item):
 		groupID = self.invTypes.get(typename=item).groupid
 		categoryID = self.invGroups.get(groupid=int(groupID)).categoryid
@@ -179,7 +161,7 @@ class GetFittingPrice:
 
 		self.systemID = self.invNames.get(itemname=form_data['system']).itemid
 		ships = ship_fitting.get()
-		logger.debug("ships: {0}".format(ships.fittings))
+		#logger.debug("ships: {0}".format(ships.fittings))
 
 		for ship in self.itemList:
 			self.save_fitting(ship)
